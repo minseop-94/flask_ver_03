@@ -10,7 +10,8 @@ from PIL import Image
 # import os, glob, time
 from keras.layers import BatchNormalization
 from flask_cors import CORS
-
+# import cv2 
+import os
 # =========== Flask 객체 app 생성 및 설정(Json, Ascii, Corpse) ==================================
 
 app = Flask(__name__)
@@ -23,6 +24,10 @@ CORS(app)
 global model
 model = load_model('47-0.310246.h5',
                    custom_objects={'BatchNormalization': BatchNormalization})
+
+
+UPLOAD_FOLD = r'.\UPLOAD_FOLDER'
+app.config['UPLOAD_FOLDER'] = r'.\UPLOAD_FOLDER'
 
 
 categories = ["무드1-직장인", "무드2-캐주얼", \
@@ -51,31 +56,34 @@ def inference():
 
         return 'images is missing', 777
 
-    # request에 파일 받기 request.files['key_name']
-    img = request.files['images']
-    # filename = request.files["fileName"]
-    # id = request.data
-    # id= request.form["data"]
-    # # id = str(id)
-    # print("id값을 제대로 받아옴?", id)
-    # print("filename 제대로 받아옴?", filename)
-    # session['img'] = img
+    # request에서 파일 받기 request.files['key_name']
+    # img = request.files['images']
 
     # “python filestorage object to image”
+    
     # read image file string data
-    imgstr = img.read()
+    # imgstr = img.read()
     # convert string data to numpy array
-    npimg = np.fromstring(imgstr, np.uint8)
+    # npimg = np.fromstring(imgstr, np.uint8)
     # convert numpy array to image 원래 참고
     # img = cv2.imdecode(npimg, cv2.CV_LOAD_IMAGE_UNCHANGED)
-
+    # img = cv2.imdecode(np.fromstring(imgstr, np.uint8), cv2.IMREAD_UNCHANGED) //원본코드
+    # img = cv2.imread(imgstr, cv2.IMREAD_UNCHANGED)
     # 이미지 resize, 변환 후
     X = []
 
-    img = Image.fromarray(npimg.astype('uint8'))
+    # img = Image.fromarray(npimg.astype('uint8')) // 잠시 image 테스트를 위해 
+    img = request.files['images']
+    path = os.path.join(app.config['UPLOAD_FOLDER'], img.filename)
+    img.save(path)
+    # print(path)
+    # print("여기서 시작인가? img.convert()들어가기 직전 img: ", img)
 
+    
+    f = open(path,'rb')
+    img = Image.open(f)
     img = img.convert("RGB")
-
+    
     # print("img -> rgb 여기까지 test 2 옴")
 
     img = img.resize((200, 200))
@@ -96,6 +104,7 @@ def inference():
     # print(categories[4]+':'+str(pred[0][4]))
     # print(categories[5]+':'+str(pred[0][5]))
     # print(categories[6]+':'+str(pred[0][6]))
+    # print(categories[6]+':'+str(pred[0][7]))
 
     return(res(pred))
 
@@ -156,13 +165,13 @@ def res(pred):
     a1 = result['mood'][0]
     num = 0
     max = int(a1['무드1-직장인'][0])
-
+    result_style = 0
     for i in a1:
         if max < int(a1[i][0]):
             max = int(a1[i][0])
             result_style = i   # 가장 수치 높은 스타일
 
-    print('1등 스타일 :', result_style, max, '%')
+    # print('1등 스타일 :', result_style, max, '%')
 
     toDB(result_style)  # toDB() : DB 테이블에 insert하는 함수
     # return jsonify(result)
@@ -178,9 +187,9 @@ def toDB(result_style):
     age = my_data["age"]
     # result_style = "섹시"
 
-    print("gender : ",gender)
+    # print("gender : ",gender)
     # print(type(gender))
-    print("age : ", age)
+    # print("age : ", age)
     db.insert02(gender, age, result_style)
 
 
