@@ -7,13 +7,14 @@ from flask import Flask, render_template, request, jsonify, json
 from PIL import Image
 from keras.layers import BatchNormalization
 from flask_cors import CORS
-
+import os
 # =========== <Flask 객체 app 생성 및 설정(Json, Ascii, Corpse)> =====================
 
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
 CORS(app)  # cors 설정 -> 교차검증
-
+UPLOAD_FOLD = r'.\UPLOAD_FOLDER' 
+app.config['UPLOAD_FOLDER'] = r'.\UPLOAD_FOLDER'
 # ========== <딥러닝 모델 호출(?)> ===================================================
 
 global model
@@ -32,12 +33,10 @@ def inference():
 
     # request에 파일 받기 request.files['key_name']
     img = request.files['images']
-    imgstr = img.read()
-    # convert string data to numpy array
-    npimg = np.fromstring(imgstr, np.uint8)
-    # convert numpy array to image 원래 참고
-    X = []
-    img = Image.fromarray(npimg.astype('uint8'))
+    path = os.path.join(app.config['UPLOAD_FOLDER'], img.filename)
+    img.save(path)
+    f = open(path,'rb')
+    img = Image.open(f)
     img = img.convert("RGB")
     img = img.resize((200, 200))
     data2 = np.asarray(img)
@@ -57,6 +56,12 @@ def inference():
 categories = [
     "직장인💼", "뉴요커📸", "바캉스⛱", "러블리🌷", 
     "GD😎", "힙스터🏃", "불금🔥", "대학생🙋"]
+
+'''
+categories = [
+    "직장인", "뉴요커", "바캉스", "러블리", 
+    "GD", "힙스터", "불금", "대학생"]
+'''
 
 motd_mention = [
 
@@ -118,6 +123,9 @@ def res(pred):
 
     # result_style 추출
     result_style = a[0][0]
+    print(result_style)
+    print(type(result_style))
+    result_style = result_style[:-1]
 
     toDB(result_style)  # toDB() : DB 테이블에 insert하는 함수    ?????????
     return jsonify(result)
@@ -134,9 +142,11 @@ def toDB(result_style):
     age = my_data["age"]
     # result_style = "섹시"
 
-    # print(gender)
-    # print(type(gender))
-    # print("age : ", age)
+    print()
+    print(gender)
+    print(type(gender))
+    print("age : ", age)
+    print(result_style)
     
     db.insert(gender, age, result_style)
 
@@ -171,5 +181,5 @@ def html01():
 #         Port : 3216
 
 if __name__ == '__main__':
-    app.run(debug=True, port=3216)  
+    app.run()  
 # []
